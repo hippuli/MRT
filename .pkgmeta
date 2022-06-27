@@ -1,6 +1,5 @@
-package-as: MRT-root
+package-as: MRT
 
 move-folders:
   MRT/ExRT: ExRT
   MRT/MRT: MRT
-
