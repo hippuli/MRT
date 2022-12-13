@@ -1,5 +1,4 @@
 package-as: MRT
 
 move-folders:
-  MRT/ExRT: ExRT
   MRT/MRT: MRT
