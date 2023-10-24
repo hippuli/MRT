@@ -388,6 +388,26 @@ do
 	end
 end
 
+do
+
+	local nilData = {}
+	local talentEntriesData = {}
+	module.db.talent_entries_debug = talentEntriesData
+	module.db.talent_entries = setmetatable({}, {
+		__index = function (t,k) 
+			return talentEntriesData[k] or nilData
+		end
+	})
+	function module:SetTalentEntries(player,entries)
+		if not player then
+			return
+		end
+		talentEntriesData[player] = entries
+	end
+	--/dump GetMouseFocus().entryID
+end
+
+
 module.db.spell_charge_fix = {		--Спелы с зарядами
 	[51505]=108283,
 	[204019]=1,
@@ -515,6 +535,8 @@ do
 		end
 	end
 end
+
+module.db.spell_runningSameTalent = {}	--Схожие таланты
 
 module.db.spell_reduceCdCast = {	--Заклинания, применение которых уменьшает время восстановления других заклинаний	[spellID] = {reduceSpellID,time;{reduceSpellID2,talentID},time2;{reduceSpellID3,talentID,specID,effectOnlyDuringBuffActive},time3}
 }
@@ -1052,6 +1074,7 @@ do
 		["afterCombatNotReset"]={module.db.spell_afterCombatNotReset,0},
 		["changeCdWithHaste"]={module.db.spell_reduceCdByHaste,0},
 		["sameSpell"]={module.db.spell_runningSameSpell2,0},
+		["sameTalent"]={module.db.spell_runningSameTalent,0},
 		["isDispel"]={module.db.spell_dispellsList,0},
 		["isBattleRes"]={module.db.spell_battleRes,0},
 		["isRacial"]={module.db.spell_isRacial,0},
@@ -1342,6 +1365,9 @@ local function BarUpdateText(self)
 		end
 	end
 
+	if barParent.textShowTargetName and barData.targetName and time >= 1 then
+		name = name .. " > "..barData.targetName
+	end
 	if barData.specialAddText then
 		name = name .. (barData.specialAddText() or "")
 	end
@@ -1634,6 +1660,7 @@ local function UpdateBarStatus(self,isTitle)
 		self.curr_start = data.charge
 		self.curr_end = data.charge+data.cd
 		self.curr_dur = data.cd
+		if self.curr_dur < 1 then self.curr_dur = 1 end
 
 		if parent.optionTimeLineAnimation == 1 then
 			self.timeline:SetShown(false)
@@ -1650,6 +1677,7 @@ local function UpdateBarStatus(self,isTitle)
 		self.curr_start = lastUse
 		self.curr_end = t
 		self.curr_dur = t - lastUse
+		if self.curr_dur < 1 then self.curr_dur = 1 end
 		self.curr_end_cd = tOnlyCD
 
 		self.timeline.SetWidth = self.timeline._SetWidth
@@ -2684,6 +2712,7 @@ do
 	local spell_isTalent = _db.spell_isTalent
 	local spell_isPvpTalent = _db.spell_isPvpTalent
 	local session_gGUIDs = _db.session_gGUIDs
+	local spell_runningSameTalent = _db.spell_runningSameTalent
 	local spell_isPetAbility = _db.spell_isPetAbility
 	local session_Pets = _db.session_Pets
 	local petsAbilities = _db.petsAbilities
@@ -2813,6 +2842,13 @@ do
 
 		return isOnCD or (data.isCharge and data.charge and data.charge > currTime)
 	end
+	local function CheckAllTalents(name,list)
+		for i=1,#list do
+			if session_gGUIDs[name][ list[i] ] then
+				return true
+			end
+		end
+	end
 
 	function UpdateAllData()
 		reviewID = reviewID + 1
@@ -2834,7 +2870,7 @@ do
 
 			if isTestMode or (VMRT_CDE[spellID] and 
 			(db[unitSpecID] or (not db[unitSpecID] and db[4])) and 
-			(not spell_isTalent[spellID] or session_gGUIDs[name][spellID]) and 
+			(not spell_isTalent[spellID] or session_gGUIDs[name][spellID] or (spell_runningSameTalent[spellID] and CheckAllTalents(name,spell_runningSameTalent[spellID]))) and 
 			(not spell_isPvpTalent[spellID] or (session_gGUIDs[name][spellID] and IsPvpTalentsOn(name))) and 
 			(not spell_isPetAbility[spellID] or session_Pets[name] == spell_isPetAbility[spellID] or (session_Pets[name] and petsAbilities[ session_Pets[name] ] and petsAbilities[ session_Pets[name] ][1] == spell_isPetAbility[spellID]) or (type(spell_isPetAbility[spellID]) == "table" and session_Pets[name] and ExRT.F.table_find(spell_isPetAbility[spellID],session_Pets[name]))) and
 			(not spell_talentReplaceOther[spellID] or not TalentReplaceOtherCheck(spellID,name)) and
@@ -3829,7 +3865,7 @@ do
 			end
 		end
 	end
-	function CLEUstartCD(i)
+	function CLEUstartCD(i,targetName)
 		local currTime = GetTime()
 		local data = nil
 		if type(i) == "table" then
@@ -3858,6 +3894,8 @@ do
 				return
 			end
 		end
+
+		data.targetName = targetName
 
 		data.cd = data.db[uSpecID][2]
 		data.duration = data.db[uSpecID][3]
@@ -3919,6 +3957,13 @@ do
 							if type(timeReduce[2]) == "number" and timeReduce[2] > 1000 then
 								if IsAuraActive(fullName,timeReduce[2]) then
 									timeReduce = timeReduce[1]
+									if type(timeReduce[3]) == "number" then
+										if module.db.talent_entries[fullName][ timeReduce[3] ] then
+											timeReduce = timeReduce[1]
+										else
+											timeReduce = 0
+										end
+									end
 								else
 									timeReduce = 0
 								end
@@ -4740,11 +4785,17 @@ do
 		end
 	end
 
+	local realmKey = GetRealmName() or ""
+	realmKey = realmKey:gsub(" ","")
+	local realmKey_find = "%-"..realmKey.."$"
+
 	local env = {
 		module = module,
 		_db = _db,
 		eventsView = eventsView,
 		_C = _C,
+
+		realmKey_find = realmKey_find,
 
 		spell_startCDbyAuraApplied_fix = _db.spell_startCDbyAuraApplied_fix,
 		spell_startCDbyAuraApplied = _db.spell_startCDbyAuraApplied,
@@ -4787,8 +4838,10 @@ do
 		UnitHealth = UnitHealth,
 		GetSpellInfo = GetSpellInfo,
 		type = type,
+		Gtype = type,
 		pairs = pairs,
 		ipairs = ipairs,
+		strsplit = strsplit,
 
 		CLEUstartCD = CLEUstartCD,
 		UpdateAllData = UpdateAllData,
@@ -4807,6 +4860,8 @@ do
 				if not sourceName then
 					return
 				end
+				if type(sourceName)=="string" and sourceName:find(realmKey_find) then sourceName = strsplit("-",sourceName) end
+				if type(destName)=="string" and destName:find(realmKey_find) then destName = strsplit("-",destName) end
 				$$$2
 				local forceUpdateAllData
 
@@ -4835,7 +4890,7 @@ do
 
 				local line = CDList[sourceName][spellID]
 				if line then
-					CLEUstartCD(line)
+					CLEUstartCD(line,destName)
 				end
 
 				if spell_isTalent[spellID] and not isSpellDuplicateDisabled and not session_gGUIDs[sourceName][spellID] then
@@ -5008,12 +5063,14 @@ do
 				if not sourceName then
 					return
 				end
+				if type(sourceName)=="string" and sourceName:find(realmKey_find) then sourceName = strsplit("-",sourceName) end
+				if type(destName)=="string" and destName:find(realmKey_find) then destName = strsplit("-",destName) end
 				$$$2
 				local CDspellID = spell_startCDbyAuraApplied[spellID]
 				if CDspellID then
 					local line = CDList[sourceName][CDspellID]
 					if line then
-						CLEUstartCD(line)
+						CLEUstartCD(line,destName)
 					end
 				end
 
@@ -5220,6 +5277,8 @@ do
 				if not sourceName then
 					return
 				end
+				if type(sourceName)=="string" and sourceName:find(realmKey_find) then sourceName = strsplit("-",sourceName) end
+				if type(destName)=="string" and destName:find(realmKey_find) then destName = strsplit("-",destName) end
 				$$$2
 				local forceUpdateAllData
 
@@ -5279,7 +5338,7 @@ do
 				if CDspellID then
 					local line = CDList[sourceName][CDspellID]
 					if line then
-						CLEUstartCD(line)
+						CLEUstartCD(line,destName)
 					end
 				end
 
@@ -5287,7 +5346,7 @@ do
 				if CDspellID then
 					local line = CDList[sourceName][CDspellID]
 					if line then
-						CLEUstartCD(line)
+						CLEUstartCD(line,destName)
 					end
 				end
 
@@ -5371,24 +5430,32 @@ do
 		]]},
 		SPELL_SUMMON = {isEmpty=true,main=[[
 			return function (timestamp,event,hideCaster,sourceGUID,sourceName,sourceFlags,sourceFlags2,destGUID,destName,destFlags,destFlags2,spellID,spellName)
+				if type(sourceName)=="string" and sourceName:find(realmKey_find) then sourceName = strsplit("-",sourceName) end
+				if type(destName)=="string" and destName:find(realmKey_find) then destName = strsplit("-",destName) end
 				$$$2
 				$$$1
 			end
 		]]},
 		SPELL_AURA_APPLIED_DOSE = {isEmpty=true,main=[[
 			return function (timestamp,event,hideCaster,sourceGUID,sourceName,sourceFlags,sourceFlags2,destGUID,destName,destFlags,destFlags2,spellID,spellName,_,type,stack)
+				if Gtype(sourceName)=="string" and sourceName:find(realmKey_find) then sourceName = strsplit("-",sourceName) end
+				if Gtype(destName)=="string" and destName:find(realmKey_find) then destName = strsplit("-",destName) end
 				$$$2
 				$$$1
 			end
 		]]},
 		SPELL_AURA_REMOVED_DOSE = {isEmpty=true,main=[[
 			return function (timestamp,event,hideCaster,sourceGUID,sourceName,sourceFlags,sourceFlags2,destGUID,destName,destFlags,destFlags2,spellID,spellName,_,type,stack)
+				if Gtype(sourceName)=="string" and sourceName:find(realmKey_find) then sourceName = strsplit("-",sourceName) end
+				if Gtype(destName)=="string" and destName:find(realmKey_find) then destName = strsplit("-",destName) end
 				$$$2
 				$$$1
 			end
 		]]},
 		SPELL_DISPEL = {main=[[
 			return function (timestamp,event,hideCaster,sourceGUID,sourceName,sourceFlags,sourceFlags2,destGUID,destName,destFlags,destFlags2,spellID,spellName,_,destSpell)
+				if type(sourceName)=="string" and sourceName:find(realmKey_find) then sourceName = strsplit("-",sourceName) end
+				if type(destName)=="string" and destName:find(realmKey_find) then destName = strsplit("-",destName) end
 				$$$2
 				if spell_dispellsList[spellID] and sourceName then
 					_db.spell_dispellsFix[ sourceName ] = true
@@ -5398,6 +5465,8 @@ do
 		]]},
 		SPELL_DAMAGE = {isEmpty=true,main=[[
 			return function (timestamp,event,hideCaster,sourceGUID,sourceName,sourceFlags,sourceFlags2,destGUID,destName,destFlags,destFlags2,spellID,spellName,_,amount,overkill,school,resisted,blocked,absorbed,critical,glancing,crushing,isOffHand)
+				if type(sourceName)=="string" and sourceName:find(realmKey_find) then sourceName = strsplit("-",sourceName) end
+				if type(destName)=="string" and destName:find(realmKey_find) then destName = strsplit("-",destName) end
 				$$$2
 				$$$1
 			end
@@ -5410,18 +5479,24 @@ do
 		]]}},
 		SPELL_HEAL = {isEmpty=true,main=[[
 			return function (timestamp,event,hideCaster,sourceGUID,sourceName,sourceFlags,sourceFlags2,destGUID,destName,destFlags,destFlags2,spellID,spellName,_,amount,overhealing,absorbed,critical)
+				if type(sourceName)=="string" and sourceName:find(realmKey_find) then sourceName = strsplit("-",sourceName) end
+				if type(destName)=="string" and destName:find(realmKey_find) then destName = strsplit("-",destName) end
 				$$$2
 				$$$1
 			end
 		]],subevents={SPELL_PERIODIC_HEAL=true}},
 		SPELL_ENERGIZE = {isEmpty=true,main=[[
 			return function (timestamp,event,hideCaster,sourceGUID,sourceName,sourceFlags,sourceFlags2,destGUID,destName,destFlags,destFlags2,spellID,spellName,_,amount,overEnergize,powerType,alternatePowerType)
+				if type(sourceName)=="string" and sourceName:find(realmKey_find) then sourceName = strsplit("-",sourceName) end
+				if type(destName)=="string" and destName:find(realmKey_find) then destName = strsplit("-",destName) end
 				$$$2
 				$$$1
 			end
 		]],subevents={SPELL_PERIODIC_ENERGIZE=true}},
 		SPELL_MISSED = {isEmpty=true,main=[[
 			return function (timestamp,event,hideCaster,sourceGUID,sourceName,sourceFlags,sourceFlags2,destGUID,destName,destFlags,destFlags2,spellID,spellName,_,missType,isOffHand,amountMissed,critical)
+				if type(sourceName)=="string" and sourceName:find(realmKey_find) then sourceName = strsplit("-",sourceName) end
+				if type(destName)=="string" and destName:find(realmKey_find) then destName = strsplit("-",destName) end
 				$$$2
 				$$$1
 			end
@@ -5434,6 +5509,8 @@ do
 		]]}},
 		SPELL_INTERRUPT = {isEmpty=true,main=[[
 			return function (timestamp,event,hideCaster,sourceGUID,sourceName,sourceFlags,sourceFlags2,destGUID,destName,destFlags,destFlags2,spellID,spellName,_,destSpell)
+				if type(sourceName)=="string" and sourceName:find(realmKey_find) then sourceName = strsplit("-",sourceName) end
+				if type(destName)=="string" and destName:find(realmKey_find) then destName = strsplit("-",destName) end
 				$$$2
 				$$$1
 			end
@@ -7389,6 +7466,7 @@ function module.options:Load()
 			local deftextIconCDStyle = VColOpt.textIconCDStyle or defOpt.textIconCDStyle
 			optColSet.dropDownIconCDStyle:SetText(optColSet.dropDownIconCDStyle.Styles[deftextIconCDStyle])
 		end
+		optColSet.chkShowTargetName:SetChecked(VColOpt.textShowTargetName)
 
 		optColSet.chkGeneralText:SetChecked(VColOpt.textGeneral)
 
@@ -8342,6 +8420,15 @@ function module.options:Load()
 		}
 	end
 
+	self.optColSet.chkShowTargetName = ELib:Check(self.optColSet.superTabFrame.tab[5],L.cd2ColSetTextShowTargetName):Point("TOPLEFT",self.optColSet.chkIconName,0,-60):OnClick(function(self) 
+		if self:GetChecked() then
+			currColOpt.textShowTargetName = true
+		else
+			currColOpt.textShowTargetName = nil
+		end
+		module:ReloadAllSplits()
+	end)
+
 	self.optColSet.chkGeneralText = ELib:Check(self.optColSet.superTabFrame.tab[5],L.cd2ColSetGeneral):Point("TOPRIGHT",-10,-10):Left():OnClick(function(self) 
 		if self:GetChecked() then
 			currColOpt.textGeneral = true
@@ -8352,7 +8439,7 @@ function module.options:Load()
 		self:doAlphas()
 	end)
 	function self.optColSet.chkGeneralText:doAlphas()
-		ExRT.lib.SetAlphas(VMRT.ExCD2.colSet[module.options.optColTabs.selected].textGeneral and module.options.optColTabs.selected ~= (module.db.maxColumns + 1) and 0.5 or 1,module.options.optColSet.textLeftTemEdit,module.options.optColSet.textRightTemEdit,module.options.optColSet.textCenterTemEdit,module.options.optColSet.chkIconName,module.options.optColSet.textAllTemplates,module.options.optColSet.textLeftTemText,module.options.optColSet.textRightTemText,module.options.optColSet.textCenterTemText,module.options.optColSet.textResetButton,module.options.optColSet.sliderIconNameChars,module.options.optColSet.dropDownIconCDStyle,module.options.optColSet.textdropDownIconCDStyle)
+		ExRT.lib.SetAlphas(VMRT.ExCD2.colSet[module.options.optColTabs.selected].textGeneral and module.options.optColTabs.selected ~= (module.db.maxColumns + 1) and 0.5 or 1,module.options.optColSet.textLeftTemEdit,module.options.optColSet.textRightTemEdit,module.options.optColSet.textCenterTemEdit,module.options.optColSet.chkIconName,module.options.optColSet.textAllTemplates,module.options.optColSet.textLeftTemText,module.options.optColSet.textRightTemText,module.options.optColSet.textCenterTemText,module.options.optColSet.textResetButton,module.options.optColSet.sliderIconNameChars,module.options.optColSet.dropDownIconCDStyle,module.options.optColSet.textdropDownIconCDStyle,module.options.optColSet.chkShowTargetName)
 	end
 
 	--> Method options
@@ -10519,6 +10606,9 @@ function module:ColApplyStyle(columnFrame,currColOpt,generalOpt,defOpt,mainWidth
 	columnFrame.textIconNameChars = (not currColOpt.textGeneral and currColOpt.textIconNameChars) or (currColOpt.textGeneral and generalOpt.textIconNameChars) or defOpt.textIconNameChars
 	columnFrame.textIconCDStyle = (not currColOpt.textGeneral and currColOpt.textIconCDStyle) or (currColOpt.textGeneral and generalOpt.textIconCDStyle) or defOpt.textIconCDStyle
 
+	columnFrame.textShowTargetName = (not currColOpt.textGeneral and currColOpt.textShowTargetName) or (currColOpt.textGeneral and generalOpt.textShowTargetName)
+
+
 	local blacklistText = (not currColOpt.blacklistGeneral and currColOpt.blacklistText) or (currColOpt.blacklistGeneral and generalOpt.blacklistText) or defOpt.blacklistText
 	columnFrame.BlackList = CreateBlackList(blacklistText)
 	local whitelistText = (not currColOpt.blacklistGeneral and currColOpt.whitelistText) or (currColOpt.blacklistGeneral and generalOpt.whitelistText) or defOpt.whitelistText
@@ -11141,8 +11231,8 @@ module.db.AllSpells = {
 		]]
 		},
 	{31884,	"PALADIN,RAID,DPS",1,--Гнев карателя
-		nil,{31884,120,20},{31884,120,20},{31884,120,20},
-		durationDiff={231895,5,286229,5,53376,"*1.25"},cdDiff={296320,"*0.80"},sameSpell={31884,231895,389539},hideWithTalent={216331},icon="Interface\\Icons\\spell_holy_avenginewrath",reduceCdAfterCast={{53600,204074},{-1.5,-3},{85673,204074},{-1.5,-3},{53600,204074},{-1.5,-3},{85256,204074},{-1.5,-3},{53385,204074},{-1.5,-3},{215661,204074},{-1.5,-3}},increaseDurAfterCast={{24275,391142},1,{24275,337594},1,{24275,332806},3}},
+		nil,{31884,120,20},{31884,120,20},{31884,60,20},
+		durationDiff={231895,10,286229,5,406872,3,53376,"*1.25"},cdDiff={231895,60,296320,"*0.80"},sameSpell={31884,231895,389539},sameTalent={231895},hideWithTalent={216331},icon="Interface\\Icons\\spell_holy_avenginewrath",reduceCdAfterCast={{53600,204074},{-1.5,-3},{85673,204074},{-1.5,-3},{53600,204074},{-1.5,-3},{85256,204074},{-1.5,-3},{53385,204074},{-1.5,-3},{215661,204074},{-1.5,-3}},increaseDurAfterCast={{24275,391142},1,{24275,337594},1,{24275,332806},3}},
 	{1044,	"PALADIN,DEFTAR",2,--Благословенная свобода
 		{1044,25,8},nil,nil,nil,
 		isTalent=true,hasCharges=199454,reduceCdAfterCast={{85256,337600},-3,{85222,337600},-3,{85673,337600},-3,{53385,337600},-3,{152262,337600},-3,{53600,337600},-3}},
@@ -11767,7 +11857,8 @@ module.db.AllSpells = {
 		nil,nil,{204883,15,0},nil,
 		changeCdWithHaste=true},
 	{19236,	"PRIEST,DEF",4,--Молитва отчаяния
-		{19236,90,0},nil,nil,nil},
+		{19236,90,0},nil,nil,nil,
+		cdDiff={238100,-20}},
 	{47585,	"PRIEST,DEF",4,--Слияние с Тьмой
 		nil,nil,nil,{47585,120,6},
 		isTalent=true,cdDiff={288733,-30}},
@@ -11815,27 +11906,8 @@ module.db.AllSpells = {
 			end
 		]]},
 	{373481,"PRIEST",3,--Слово Силы: Жизнь
-		{373481,30,0},nil,nil,nil,
-		isTalent=true,
-		CLEU_SPELL_HEAL=[[
-			if spellID == 373481 and destName then
-				local maxHP = UnitHealthMax(destName) or 0
-				if maxHP ~= 0 then
-					local hpB4 = UnitHealth(destName) - (amount-overhealing)
-					local hp = hpB4 / maxHP
-	
-					if hp < 0.35 then
-						local line = CDList[sourceName][373481]
-						if line then
-							C_Timer.After(0.3,function()	--Await for actual cast, selfhealing event fired first
-								line:ChangeCD(-20)
-							end)
-						end
-					end
-				end
-
-			end
-		]]},
+		{373481,15,0},nil,nil,nil,
+		isTalent=true},
 	{62618,	"PRIEST,RAID",1,--Слово силы: Барьер
 		nil,{62618,180,10},nil,nil,
 		isTalent=true,cdDiff={197590,-90},hideWithTalent=271466,icon="Interface\\Icons\\spell_holy_powerwordbarrier"},
@@ -13219,7 +13291,7 @@ module.db.AllSpells = {
 		hideWithTalent=252216,ignoreUseWithAura=375230,changeCdWithAura={381746,"*0.85"}},
 	{22842,	"DRUID,DEFTANK",4,--Неистовое восстановление
 		{22842,36,3},nil,nil,nil,nil,
-		isTalent=true,baseForSpec=104,hasCharges=273048,changeCdWithHaste=true,
+		isTalent=true,baseForSpec=104,hasCharges=273048,changeCdWithHaste=true,cdDiff={372945,{"*0.8","*0.6"},50334,{"*0.001",50334,103211}},
 		CLEU_PREP=[[
 			berserk = {}
 		]],CLEU_SPELL_AURA_APPLIED=[[
@@ -13246,7 +13318,7 @@ module.db.AllSpells = {
 		]]},
 	{6795,	"DRUID,TAUNT",5,--Рык
 		{6795,8,0},nil,nil,nil,nil,
-		hideWithTalent=207017},
+		hideWithTalent=207017,cdDiff={50334,{"*0.50",50334,103216}}},
 	{99,	"DRUID,CC",3,--Парализующий рык
 		{99,30,0},nil,nil,nil,nil,
 		isTalent=true},
@@ -13606,8 +13678,7 @@ module.db.AllSpells = {
 		nil,{258925,60,0},nil,
 		isTalent=true},
 	{211881,"DEMONHUNTER,CC",3,--Извержение Скверны
-		nil,{211881,30,0},nil,
-		isTalent=true},
+		nil,{211881,30,0},nil},
 	{232893,"DEMONHUNTER",3,--Клинок Скверны
 		{232893,15,0},nil,nil,
 		isTalent=true,changeCdWithHaste=true},

@@ -1,6 +1,17 @@
 local GlobalAddonName, ExRT = ...
 
 ExRT.Options.Changelog = [=[
+v.4781
+* Fixes
+
+v.4780
+* Marks Bar: added ping buttons
+* Raid cooldowns: added option for spell target
+* Fixes
+
+v.4780-LK
+* Visual Note: Added ICC room maps
+
 v.4770
 * Fixed /rt pull timer for DBM
 * Raid cooldowns: added autoswap profiles for specs

@@ -16,6 +16,7 @@ module.db.mapsToLog_5ppl = {
 	[1195] = true, -- Iron Docks
 	[1651] = true, -- Return to Karazhan
 	[657] = true,	-- The Vortex Pinnacle
+	[643] = true,	-- Throne of the Tides
 }
 
 function module.options:Load()

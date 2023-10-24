@@ -108,7 +108,7 @@ local function GSUB_Player(anti,list,msg)
 	local found = false
 	local myName = (MRT.SDB.charName):lower()
 	for i=1,#list do
-		list[i] = list[i]:gsub("|c........",""):gsub("|r",""):lower()
+		list[i] = list[i]:gsub("|?|c........",""):gsub("|?|r",""):lower()
 		if strsplit("-",list[i]) == myName then
 			found = true
 			break
@@ -126,7 +126,7 @@ local function GSUB_Encounter(list,msg)
 	list = {strsplit(",",list)}
 	local found = false
 	for i=1,#list do
-		list[i] = list[i]:gsub("|c........",""):gsub("|r",""):lower()
+		list[i] = list[i]:gsub("|?|c........",""):gsub("|?|r",""):lower()
 		if encounter_id[ list[i] ] then
 			found = true
 			break
@@ -198,7 +198,7 @@ local function GSUB_Class(anti,list,msg)
 	local myClassIndex = select(3,UnitClass("player"))
 	local found = false
 	for i=1,#list do
-		list[i] = list[i]:gsub("|c........",""):gsub("|r",""):lower()
+		list[i] = list[i]:gsub("|?|c........",""):gsub("|?|r",""):lower()
 		if classList[ list[i] ] == myClassIndex then
 			found = true
 			break
@@ -224,7 +224,7 @@ local function GSUB_ClassUnique(list,msg)
 	local found = nil
 
 	for i=1,#list do
-		list[i] = list[i]:gsub("|c........",""):gsub("|r",""):lower()
+		list[i] = list[i]:gsub("|?|c........",""):gsub("|?|r",""):lower()
 		local classID = classList[ list[i] ]
 		if classID and classInParty[classID] then
 			found = classID
@@ -251,7 +251,7 @@ local function GSUB_Race(anti,list,msg)
 	local myRace = select(2,UnitRace("player")):lower()
 	local found = false
 	for i=1,#list do
-		list[i] = list[i]:gsub("|c........",""):gsub("|r",""):lower()
+		list[i] = list[i]:gsub("|?|c........",""):gsub("|?|r",""):lower()
 		if list[i] == myRace then
 			found = true
 			break
