@@ -587,6 +587,7 @@ L.cd2ColSetIconMasque = "Enable Masque support"
 PH.cd2ColSetRightToLeft = "Anchor from right to left"
 L.cd2AutoChangeSpecTooltip = "Autochange profile for spec"
 L.cd2ColSetTextShowTargetName = "Show target name"
+L.cd2ClickKeyMod = "Click key modifiers"
 
 L.sallspellsEggClear = "Clear"
 L.sallspellsEgg = "Combat log"

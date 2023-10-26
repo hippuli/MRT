@@ -587,6 +587,7 @@ L.cd2ColSetIconMasque = "Включить поддержку Masque"
 L.cd2ColSetRightToLeft = "Рост полос в колонке справа налево"
 L.cd2AutoChangeSpecTooltip = "Автосмена профиля для специализации"
 L.cd2ColSetTextShowTargetName = "Показывать имя цели"
+L.cd2ClickKeyMod = "Модификаторы клавиш для нажатия"
 
 L.sallspellsEggClear = "Очистить"
 L.sallspellsEgg = "Лог заклинаний"

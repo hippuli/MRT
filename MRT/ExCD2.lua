@@ -2065,6 +2065,11 @@ local function LineIconOnClick(self)
 		parent.data.specialClick(parent.data)
 		return
 	end
+	if (parent:GetParent().methodsLineClickMod == "shift" and not IsShiftKeyDown()) or
+		(parent:GetParent().methodsLineClickMod == "alt" and not IsAltKeyDown()) or
+		(parent:GetParent().methodsLineClickMod == "ctrl" and not IsControlKeyDown()) then
+		return
+	end
 	local time = parent.data.lastUse + parent.data.cd - GetTime()
 	if time < 0 then return end
 	local text = parent.data.name.." - "..parent.data.spellName..": "..format("%1.1d:%2.2d",time/60,time%60)
@@ -2076,6 +2081,11 @@ local function LineIconOnClickWhisper(self)
 	if not parent.data then	return end
 	if parent.data.specialClick then
 		parent.data.specialClick(parent.data)
+		return
+	end
+	if (parent:GetParent().methodsLineClickMod == "shift" and not IsShiftKeyDown()) or
+		(parent:GetParent().methodsLineClickMod == "alt" and not IsAltKeyDown()) or
+		(parent:GetParent().methodsLineClickMod == "ctrl" and not IsControlKeyDown()) then
 		return
 	end
 	local time = parent.data.lastUse + parent.data.cd - GetTime()
@@ -2732,6 +2742,7 @@ do
 	local saveDataTimer = 0
 	local lastBattleResChargesStatus = nil
 
+	--[[
 	local function sort_f(a,b)
 		if a.column ~= b.column then
 			return a.column < b.column
@@ -2745,6 +2756,21 @@ do
 			return (a.sort or 0) > (b.sort or 0)
 		else
 			return (a.sort or 0) < (b.sort or 0)
+		end
+	end
+	]]
+	local function sort_f(a,b)
+		if a.sorting ~= b.sorting then
+			return (a.sorting or 0) < (b.sorting or 0)
+		else
+			return (a.sort or 0) < (b.sort or 0)
+		end
+	end
+	local function rsort_f(a,b)
+		if a.sorting ~= b.sorting then
+			return (a.sorting or 0) > (b.sorting or 0)
+		else
+			return (a.sort or 0) > (b.sort or 0)
 		end
 	end
 
@@ -2770,6 +2796,12 @@ do
 
 	local HiddenOnCD = {}	--for "Show only without cd" option, hidden cds can't fire updateall event
 
+	local _CV_PerCol,_CV_PerCol_Count = {},{}
+	local _CV_ATF = {}
+	for i=1,maxColumns do 
+		_CV_PerCol[i] = {} 
+		_CV_PerCol_Count[i] = 1 
+	end
 	local function SortAllData()
 		local currTime = GetTime()
 	  	for i=1,_CV_Len do
@@ -2812,10 +2844,54 @@ do
 				data.sorting = 0
 			end
 			data.rsort = columnFrame.methodsReverseSorting
+
+			_CV_PerCol[data.column][ _CV_PerCol_Count[data.column] ] = data
+			_CV_PerCol_Count[data.column] = _CV_PerCol_Count[data.column] + 1
 	  	end
-		sort(_CV,sort_f)
+		local count = 1
+		for i=1,maxColumns do 
+			local CV_Col = _CV_PerCol[i]
+			for j=_CV_PerCol_Count[i],#CV_Col do
+				CV_Col[j] = nil
+			end
+			_CV_PerCol_Count[i] = 1
+			if columnsTable[i].ATFenabled then
+				local sort_func = columnsTable[i].methodsReverseSorting and rsort_f or sort_f
+				for k=1,#CV_Col do
+					if CV_Col[k] ~= 0 then
+						for j=2,#_CV_ATF do
+							_CV_ATF[j] = nil
+						end
+						local c = 1
+						_CV_ATF[1] = CV_Col[k]
+						for l=k+1,#CV_Col do
+							if CV_Col[l] ~= 0 and CV_Col[l].guid == CV_Col[k].guid then
+								c = c + 1
+								_CV_ATF[c] = CV_Col[l]
+								CV_Col[l] = 0
+							end
+						end
+
+						sort(_CV_ATF,sort_func)
+						for j=1,#_CV_ATF do
+							_CV[count] = _CV_ATF[j]
+							count = count + 1
+						end
+					end
+				end
+			else
+				sort(CV_Col,columnsTable[i].methodsReverseSorting and rsort_f or sort_f)
+
+				for j=1,#CV_Col do
+					_CV[count] = CV_Col[j]
+					count = count + 1
+				end
+			end
+		end
 	end
 	module.SortAllData = SortAllData
+	--MRT_CD_TESTMODENUM
+
 
 	local function TalentReplaceOtherCheck(spellID,name)
 		local spellData = spell_talentReplaceOther[spellID]
@@ -3682,6 +3758,9 @@ local function UpdateRoster()
 
 						if not alreadyInCds then
 							local guid = UnitGUID(name)
+							if _db.testMode and not guid then
+								guid = name
+							end
 
 							local new = {
 								name = shownName,
@@ -3840,7 +3919,8 @@ local function UpdateRoster()
 				tremove(_C, i)
 			end
 		end
-		while #_C > 300 do
+		local testModeMax = MRT_CD_TESTMODENUM or 300
+		while #_C > testModeMax do
 			tremove(_C, math.random(1,#_C))
 		end
 	end
@@ -7484,6 +7564,15 @@ function module.options:Load()
 
 			local defSortingRules = VColOpt.methodsSortingRules or defOpt.methodsSortingRules
 			optColSet.dropDownSortingRules:SetText(optColSet.dropDownSortingRules.Rules[defSortingRules])
+
+			local ClickModText
+			for i=1,#optColSet.dropDownLineClickMod.Mods,2 do 
+				if optColSet.dropDownLineClickMod.Mods[i+1] == VColOpt.methodsLineClickMod then
+					ClickModText = optColSet.dropDownLineClickMod.Mods[i]
+					break
+				end
+			end
+			optColSet.dropDownLineClickMod:SetText(ClickModText or optColSet.dropDownLineClickMod.Mods[1])
 		end
 		optColSet.chkIconTooltip:SetChecked(VColOpt.methodsIconTooltip)
 		optColSet.chkLineClick:SetChecked(VColOpt.methodsLineClick)
@@ -8535,7 +8624,24 @@ function module.options:Load()
 		module:ReloadAllSplits()
 	end)
 
-	self.optColSet.chkNewSpellNewLine = ELib:Check(self.optColSet.col6scroll,L.cd2NewSpellNewLine):Point(10,-230):Tooltip(L.cd2NewSpellNewLineTooltip):OnClick(function(self) 
+	self.optColSet.textLineClickMod = ELib:Text(self.optColSet.col6scroll,L.cd2ClickKeyMod..":",11):Size(200,20):Point(10,-230)
+	self.optColSet.dropDownLineClickMod = ELib:DropDown(self.optColSet.col6scroll,205,4):Size(150):Point(250,-230)
+	self.optColSet.dropDownLineClickMod.Mods = {"-",nil,SHIFT_KEY or "Shift","shift",CTRL_KEY or "Ctrl","ctrl",ALT_KEY_TEXT or "Alt","alt"}
+	for i=1,#self.optColSet.dropDownLineClickMod.Mods,2 do
+		local text = self.optColSet.dropDownLineClickMod.Mods[i]
+		self.optColSet.dropDownLineClickMod.List[ #self.optColSet.dropDownLineClickMod.List+1 ] = {
+			text = text,
+			arg1 = self.optColSet.dropDownLineClickMod.Mods[i+1],
+			func = function (self,arg)
+				ELib:DropDownClose()
+				currColOpt.methodsLineClickMod = arg
+				module:ReloadAllSplits()
+				self:GetParent().parent:SetText(text)
+			end
+		}
+	end
+
+	self.optColSet.chkNewSpellNewLine = ELib:Check(self.optColSet.col6scroll,L.cd2NewSpellNewLine):Point(10,-255):Tooltip(L.cd2NewSpellNewLineTooltip):OnClick(function(self) 
 		if self:GetChecked() then
 			currColOpt.methodsNewSpellNewLine = true
 		else
@@ -8544,8 +8650,8 @@ function module.options:Load()
 		module:ReloadAllSplits()
 	end)
 
-	self.optColSet.textSortingRules= ELib:Text(self.optColSet.col6scroll,L.cd2MethodsSortingRules..":",11):Size(200,20):Point(10,-255)
-	self.optColSet.dropDownSortingRules = ELib:DropDown(self.optColSet.col6scroll,405,6):Size(220):Point(180,-255)
+	self.optColSet.textSortingRules = ELib:Text(self.optColSet.col6scroll,L.cd2MethodsSortingRules..":",11):Size(200,20):Point(10,-280)
+	self.optColSet.dropDownSortingRules = ELib:DropDown(self.optColSet.col6scroll,405,6):Size(220):Point(180,-280)
 	self.optColSet.dropDownSortingRules.Rules = {L.cd2MethodsSortingRules1,L.cd2MethodsSortingRules2,L.cd2MethodsSortingRules3,L.cd2MethodsSortingRules4,L.cd2MethodsSortingRules5,L.cd2MethodsSortingRules6}
 	for i=1,#self.optColSet.dropDownSortingRules.Rules do
 		self.optColSet.dropDownSortingRules.List[i] = {
@@ -8561,7 +8667,7 @@ function module.options:Load()
 		}
 	end
 
-	self.optColSet.chkHideOwnSpells = ELib:Check(self.optColSet.col6scroll,L.cd2MethodsDisableOwn):Point(10,-280):OnClick(function(self) 
+	self.optColSet.chkHideOwnSpells = ELib:Check(self.optColSet.col6scroll,L.cd2MethodsDisableOwn):Point(10,-305):OnClick(function(self) 
 		if self:GetChecked() then
 			currColOpt.methodsHideOwnSpells = true
 		else
@@ -8570,7 +8676,7 @@ function module.options:Load()
 		module:ReloadAllSplits()
 	end)
 
-	self.optColSet.chkAlphaNotInRange = ELib:Check(self.optColSet.col6scroll,L.cd2MethodsAlphaNotInRange):Point(10,-305):OnClick(function(self) 
+	self.optColSet.chkAlphaNotInRange = ELib:Check(self.optColSet.col6scroll,L.cd2MethodsAlphaNotInRange):Point(10,-330):OnClick(function(self) 
 		if self:GetChecked() then
 			currColOpt.methodsAlphaNotInRange = true
 		else
@@ -8587,7 +8693,7 @@ function module.options:Load()
 		self:tooltipReload(self)
 	end)
 
-	self.optColSet.chkDisableActive = ELib:Check(self.optColSet.col6scroll,L.cd2ColSetDisableActive):Point(10,-330):OnClick(function(self) 
+	self.optColSet.chkDisableActive = ELib:Check(self.optColSet.col6scroll,L.cd2ColSetDisableActive):Point(10,-355):OnClick(function(self) 
 		if self:GetChecked() then
 			currColOpt.methodsDisableActive = true
 		else
@@ -8596,7 +8702,7 @@ function module.options:Load()
 		module:ReloadAllSplits()
 	end)
 
-	self.optColSet.chkOneSpellPerCol = ELib:Check(self.optColSet.col6scroll,L.cd2ColSetOneSpellPerCol):Point(10,-355):OnClick(function(self) 
+	self.optColSet.chkOneSpellPerCol = ELib:Check(self.optColSet.col6scroll,L.cd2ColSetOneSpellPerCol):Point(10,-380):OnClick(function(self) 
 		if self:GetChecked() then
 			currColOpt.methodsOneSpellPerCol = true
 		else
@@ -8605,7 +8711,7 @@ function module.options:Load()
 		module:ReloadAllSplits()
 	end):Tooltip(L.cd2ColSetOneSpellPerColTooltip)
 
-	self.optColSet.chkSortByAvailability = ELib:Check(self.optColSet.col6scroll,L.cd2SortByAvailability):Point(10,-380):OnClick(function(self) 
+	self.optColSet.chkSortByAvailability = ELib:Check(self.optColSet.col6scroll,L.cd2SortByAvailability):Point(10,-405):OnClick(function(self) 
 		if self:GetChecked() then
 			currColOpt.methodsSortByAvailability = true
 		else
@@ -8676,7 +8782,7 @@ function module.options:Load()
 
 
 	function self.optColSet.chkGeneralMethods:doAlphas()
-		ExRT.lib.SetAlphas(VMRT.ExCD2.colSet[module.options.optColTabs.selected].methodsGeneral and module.options.optColTabs.selected ~= (module.db.maxColumns + 1) and 0.5 or 1,module.options.optColSet.chkShowOnlyOnCD,module.options.optColSet.chkBotToTop,module.options.optColSet.chkRightToLeft,module.options.optColSet.dropDownStyleAnimation,module.options.optColSet.dropDownTimeLineAnimation,module.options.optColSet.chkIconTooltip,module.options.optColSet.chkLineClick,module.options.optColSet.chkNewSpellNewLine,module.options.optColSet.dropDownSortingRules,module.options.optColSet.textSortingRules,module.options.optColSet.textStyleAnimation,module.options.optColSet.textTimeLineAnimation,module.options.optColSet.chkHideOwnSpells,module.options.optColSet.chkAlphaNotInRange,module.options.optColSet.sliderAlphaNotInRange,module.options.optColSet.chkDisableActive,module.options.optColSet.chkOneSpellPerCol,module.options.optColSet.chkLineClickWhisper,module.options.optColSet.chkSortByAvailability, module.options.optColSet.chkSortByAvailability_activeToTop, module.options.optColSet.chkReverseSorting, module.options.optColSet.chkCDOnlyTimer, module.options.optColSet.chkTextIgnoreActive, module.options.optColSet.chkShowOnlyNotOnCD)
+		ExRT.lib.SetAlphas(VMRT.ExCD2.colSet[module.options.optColTabs.selected].methodsGeneral and module.options.optColTabs.selected ~= (module.db.maxColumns + 1) and 0.5 or 1,module.options.optColSet.chkShowOnlyOnCD,module.options.optColSet.chkBotToTop,module.options.optColSet.chkRightToLeft,module.options.optColSet.dropDownStyleAnimation,module.options.optColSet.dropDownTimeLineAnimation,module.options.optColSet.chkIconTooltip,module.options.optColSet.chkLineClick,module.options.optColSet.chkNewSpellNewLine,module.options.optColSet.dropDownSortingRules,module.options.optColSet.textSortingRules,module.options.optColSet.textStyleAnimation,module.options.optColSet.textTimeLineAnimation,module.options.optColSet.chkHideOwnSpells,module.options.optColSet.chkAlphaNotInRange,module.options.optColSet.sliderAlphaNotInRange,module.options.optColSet.chkDisableActive,module.options.optColSet.chkOneSpellPerCol,module.options.optColSet.chkLineClickWhisper,module.options.optColSet.chkSortByAvailability, module.options.optColSet.chkSortByAvailability_activeToTop, module.options.optColSet.chkReverseSorting, module.options.optColSet.chkCDOnlyTimer, module.options.optColSet.chkTextIgnoreActive, module.options.optColSet.chkShowOnlyNotOnCD, module.options.optColSet.dropDownLineClickMod, module.options.optColSet.textLineClickMod)
 	end
 
 
@@ -10573,6 +10679,7 @@ function module:ColApplyStyle(columnFrame,currColOpt,generalOpt,defOpt,mainWidth
 	columnFrame.methodsIconTooltip = (not currColOpt.methodsGeneral and currColOpt.methodsIconTooltip) or (currColOpt.methodsGeneral and generalOpt.methodsIconTooltip) 
 	columnFrame.methodsLineClick = (not currColOpt.methodsGeneral and currColOpt.methodsLineClick) or (currColOpt.methodsGeneral and generalOpt.methodsLineClick)
 	columnFrame.methodsLineClickWhisper = (not currColOpt.methodsGeneral and currColOpt.methodsLineClickWhisper) or (currColOpt.methodsGeneral and generalOpt.methodsLineClickWhisper)
+	columnFrame.methodsLineClickMod = (not currColOpt.methodsGeneral and currColOpt.methodsLineClickMod) or (currColOpt.methodsGeneral and generalOpt.methodsLineClickMod)
 	columnFrame.methodsNewSpellNewLine = (not currColOpt.methodsGeneral and currColOpt.methodsNewSpellNewLine) or (currColOpt.methodsGeneral and generalOpt.methodsNewSpellNewLine)
 	columnFrame.methodsSortingRules = (not currColOpt.methodsGeneral and currColOpt.methodsSortingRules) or (currColOpt.methodsGeneral and generalOpt.methodsSortingRules) or defOpt.methodsSortingRules
 	columnFrame.methodsHideOwnSpells = (not currColOpt.methodsGeneral and currColOpt.methodsHideOwnSpells) or (currColOpt.methodsGeneral and generalOpt.methodsHideOwnSpells)

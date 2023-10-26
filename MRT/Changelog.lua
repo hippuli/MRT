@@ -1,6 +1,14 @@
 local GlobalAddonName, ExRT = ...
 
 ExRT.Options.Changelog = [=[
+v.4785
+* Raid cooldowns: added option for key mod for clicks (whispers)
+* Major fixes
+
+v.4785-LK
+* Raid cooldowns: added option for key mod for clicks (whispers)
+* Major fixes
+
 v.4781
 * Fixes
 

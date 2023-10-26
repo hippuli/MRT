@@ -1,8 +1,8 @@
---	23.10.2023
+--	25.10.2023
 
 local GlobalAddonName, MRT = ...
 
-MRT.V = 4781
+MRT.V = 4785
 MRT.T = "R"
 
 MRT.Slash = {}			--> функции вызова из коммандной строки
@@ -880,7 +880,7 @@ local specialOpt = nil
 SendAddonMessage = function (...)
 	local entry = {...}
 	if type(specialOpt)=="table" then
-		if type(specialOpt.prefixNum)=="number" and specialOpt.prefixNum <= prefix_sorted and specialOpt.prefixNum > 0 then
+		if type(specialOpt.prefixNum)=="number" and specialOpt.prefixNum <= #prefix_sorted and specialOpt.prefixNum > 0 then
 			entry.prefixNum = specialOpt.prefixNum
 		end
 		if type(specialOpt.ondone)=="function" then
