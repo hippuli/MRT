@@ -40,7 +40,7 @@ L.RaidGroups = "Raid Groups"
 
 L.messagebutsend = "Send"
 L.messagebutclear = "Clear"
-L.messageButCopy = "Move to a clean copy, save and send"
+L.messageButCopy = "Move to a clean copy,\nsave and send"
 L.messagebutfix = "Lock"
 L.messagebutfixtooltip = "Enable moving and resizing note"
 L.messagebutalpha = "Alpha"
@@ -116,6 +116,9 @@ L.NoteTimersGlow = "Glowing note with own timer less than 5 seconds (line with t
 L.NoteHelpAdv6 = "Option |cffffff00glowall|r will add glow for the note for all players when the timer is less than 5 seconds. This glow can't be disabled."
 L.NoteHelpAdv7 = "Option |cffffff00glow|r will add glow for the note only for players in line when the timer is less than 5 seconds. This glow can't be disabled."
 L.NoteTimersOnlyMy = "Hide lines with timers but without my name"
+L.NotePersonalWindow = "Personal note in separate window"
+L.NoteShowInNewWindow = "Show in new window"
+L.NoteShowInNewWindowTooltip = "Shift+Right click on window to hide it\nCtrl+Click on this button to reset window position (if showed)"
 
 L.setminimap1 = "Hide minimap icon"
 L.setauthor = "Author"

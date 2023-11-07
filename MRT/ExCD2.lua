@@ -5197,7 +5197,7 @@ do
 					end, 30)
 				elseif spellID == 64901 and destName and sourceName then	--Symbol of Hope
 					local hymnDur = 5 / (1 + (UnitSpellHaste(sourceName) or 0) /100)
-					local perSec = 60 / hymnDur
+					local perSec = 30 / hymnDur
 
 					symbolofhope[sourceName..":"..destName] = C_Timer.NewTicker(1,function(self)
 						local line, updateReq
@@ -11527,9 +11527,6 @@ module.db.AllSpells = {
 	{20066,	"PALADIN,CC",3,--Покаяние
 		{20066,15,0},nil,nil,nil,
 		isTalent=true},
-	{152262,"PALADIN,DPS,HEAL",3,--Серафим
-		{152262,45,15},nil,nil,nil,
-		isTalent=true},
 	{210256,"PALADIN,PVP",3,--Благословение святилища
 		nil,nil,nil,{210256,45,5},
 		isTalent=true},
@@ -11577,7 +11574,7 @@ module.db.AllSpells = {
 			end
 		]]},
 	{359844,"HUNTER,DPS",3,--Зов дикой природы
-		nil,{359844,180,20},nil,nil,
+		nil,{359844,120,20},nil,nil,
 		isTalent=true},
 	{392060,"HUNTER",3,--Стенающая стрела
 		nil,{392060,60,0},nil,nil,
@@ -11772,7 +11769,7 @@ module.db.AllSpells = {
 		isTalent=true,durationDiff={272026,3}},
 	{2094,	"ROGUE,CC",3,--Ослепление
 		{2094,120,0},
-		isTalent=true,cdDiff={256165,-30}},
+		isTalent=true,cdDiff={256165,"*0.75"}},
 	{31224,	"ROGUE,DEF",4,--Плащ теней
 		{31224,120,5},
 		isTalent=true,
@@ -11807,7 +11804,7 @@ module.db.AllSpells = {
 		]]},
 	{1966,	"ROGUE,DEF",4,--Уловка
 		{1966,15,6},
-		isTalent=true},
+		isTalent=true,hasCharges=423647},
 	{1776,	"ROGUE,CC",3,--Парализующий удар
 		{1776,20,0},
 		isTalent=true},
@@ -11870,7 +11867,7 @@ module.db.AllSpells = {
 			end
 		]]},
 	{5938,	"ROGUE",3,--Отравляющий укол
-		{5938,25,0},
+		{5938,30,0},
 		isTalent=true},
 	{382245,"ROGUE",3,--Хладнокровие
 		{382245,45,0},
@@ -11882,10 +11879,11 @@ module.db.AllSpells = {
 		{381623,60,6},
 		isTalent=true,hasCharges=1},
 	{114018,"ROGUE,UTIL",1,--Скрывающий покров
-		{114018,360,15},nil,nil,nil},
+		{114018,360,15},nil,nil,nil,
+		cdDiff={423662,"*0.5"}},
 	{2983,	"ROGUE,MOVE",4,--Спринт
 		{2983,120,8},nil,nil,nil,
-		cdDiff={231691,-60},ignoreUseWithAura=375255,changeCdWithAura={381754,"*0.85"}},
+		cdDiff={231691,-60},ignoreUseWithAura=375255,changeCdWithAura={381754,"*0.85"},durationDiff={423683,4}},
 	{212283,"ROGUE,DPS",3,--Символы смерти
 		nil,nil,nil,{212283,30,10},
 		cdDiff={394309,-5}},
@@ -11905,13 +11903,13 @@ module.db.AllSpells = {
 		nil,{200806,45,0},nil,nil,
 		isTalent=true},
 	{196937,"ROGUE",3,--Призрачный удар
-		nil,nil,{196937,35,0},nil,
+		nil,nil,{196937,90,0},nil,
 		isTalent=true},
 	{51690,	"ROGUE,DPS",3,--Череда убийств
 		nil,nil,{51690,120,0},nil,
 		isTalent=true},
 	{137619,"ROGUE,DPS",3,--Метка смерти
-		{137619,60,0},nil,nil,nil,
+		{137619,40,0},nil,nil,nil,
 		isTalent=true},
 	{280719,"ROGUE",3,--Тайный прием
 		nil,nil,nil,{280719,60,0},
@@ -11919,6 +11917,8 @@ module.db.AllSpells = {
 	{277925,"ROGUE",3,--Торнадо из сюрикэнов
 		nil,nil,nil,{277925,60,4},
 		isTalent=true},
+	{425748,"ROGUE",3,--Exsanguinate
+		nil,{425748,60,10},nil,nil},
 	{213981,"ROGUE,PVP",3,--Хладнокровие
 		nil,nil,nil,{213981,60,0},
 		isTalent=true},
@@ -11991,8 +11991,8 @@ module.db.AllSpells = {
 		{73325,90,0},nil,nil,nil,
 		isTalent=true,hasCharges=336470,cdDiff={390620,-30,337678,{-20,-22,-24,-26,-28,-30,-32,-34,-36,-38,-40,-42,-44,-46,-48}},sameSpell={336471,73325},ignoreUseWithAura=375254,changeCdWithAura={381753,"*0.85"}},
 	{32375,	"PRIEST,DISPEL",1,--Массовое рассеивание
-		{32375,45,0},nil,nil,nil,
-		isTalent=true,cdDiff={341167,-20}},
+		{32375,120,0},nil,nil,nil,
+		isTalent=true,cdDiff={426438,-60}},
 	{33206,	"PRIEST,DEFTAR",2,--Подавление боли
 		nil,{33206,180,8},nil,nil,
 		isTalent=true,durationDiff={329693,"*1.80"},reduceCdAfterCast={{17,373035},-3},hasCharges=373035},
@@ -12091,7 +12091,7 @@ module.db.AllSpells = {
 		isTalent=true},
 	{265202,"PRIEST,RAID",1,--Слово Света: Спасение
 		nil,nil,{265202,720,0},nil,
-		isTalent=true,reduceCdAfterCast={34861,-30,2050,-30,{34861,196985},{-3,-6},{2050,196985},{-3,-6}}},
+		isTalent=true,reduceCdAfterCast={34861,-15,2050,-15,{34861,196985},{-1.5,-3},{2050,196985},{-1.5,-3}}},
 	--{205369,"PRIEST,AOECC",3,--Мыслебомба
 	--	nil,nil,nil,{205369,30,2},
 	--	isTalent=true},
@@ -12101,9 +12101,6 @@ module.db.AllSpells = {
 	{123040,"PRIEST",3,--Подчинитель разума
 		nil,{123040,60,12},nil,nil,
 		isTalent=true,cdDiff={296320,"*0.80"},reduceCdAfterCast={{585,390770},-2,{47540,390770},-2,{8092,390770},-2}},
-	{129250,"PRIEST",3,--Слово силы: Утешение
-		nil,{129250,15,0},nil,nil,
-		isTalent=true,changeCdWithHaste=true},
 	{64044,	"PRIEST,CC",3,--Глубинный ужас
 		nil,nil,nil,{64044,45,4},
 		isTalent=true},
@@ -13017,17 +13014,7 @@ module.db.AllSpells = {
 		]]},
 	{386997,"WARLOCK",3,--Гниение души
 		nil,{386997,60,0},nil,nil,
-		isTalent=true,
-		CLEU_SPELL_DAMAGE=[[
-			if spellID == 316099 and sourceName and session_gGUIDs[sourceName][389630] then
-				local line = CDList[sourceName][386997]
-				if line then
-					local talent_rank = _db.talent_classic_rank[sourceName][389630] or 2
-
-					line:ReduceCD(talent_rank * 0.5)
-				end
-			end
-		]]},
+		isTalent=true,cdDiff={389630,{-15,-30}}},
 	{386833,"WARLOCK",3,--Гильотина
 		nil,nil,{386833,45,8},nil,
 		isTalent=true},
@@ -13430,7 +13417,7 @@ module.db.AllSpells = {
 		{99,30,0},nil,nil,nil,nil,
 		isTalent=true},
 	{29166,	"DRUID,HEALUTIL",2,--Озарение
-		{29166,180,10},
+		{29166,180,8},
 		isTalent=true,
 		CLEU_SPELL_HEAL=[[
 			if spellID == 48438 and session_gGUIDs[sourceName][287251] then
@@ -13523,7 +13510,7 @@ module.db.AllSpells = {
 		]]},
 	{740,	"DRUID,RAID",1,--Спокойствие
 		nil,nil,nil,nil,{740,180,8},
-		isTalent=true,cdDiff={197073,-60,329802,-54,296320,"*0.80"},changeDurWithHaste=true,
+		isTalent=true,cdDiff={197073,-30,329802,-54,296320,"*0.80"},changeDurWithHaste=true,
 		CLEU_SPELL_HEAL=[[
 			if spellID == 157982 and event == "SPELL_HEAL" and sourceGUID == destGUID and session_gGUIDs[sourceName][392162] then
 				local line, updateReq
@@ -13561,7 +13548,7 @@ module.db.AllSpells = {
 		nil,nil,{274837,45,0},nil,nil,
 		isTalent=true},
 	{197721,"DRUID,HEAL",3,--Расцвет
-		nil,nil,nil,nil,{197721,90,8},
+		nil,nil,nil,nil,{197721,60,6},
 		isTalent=true},
 	{205636,"DRUID,UTIL",3,--Сила природы
 		nil,{205636,60,10},nil,nil,nil,
@@ -13641,7 +13628,7 @@ module.db.AllSpells = {
 		nil,{198589,60,10},nil,
 		cdDiff={338671,{-5,-6,-7,-8,-9,-10,-11,-12,-13,-14,-15,-16,-17,-18,-20}},startCdAfterAuraApply=212800},
 	{179057,"DEMONHUNTER,AOECC",3,--Кольцо Хаоса
-		{179057,60,2},
+		{179057,45,2},
 		isTalent=true,cdDiff={206477,"*0.8"}},
 	{278326,"DEMONHUNTER",5,--Поглощение магии
 		{278326,10,0},nil,nil,
@@ -13675,11 +13662,11 @@ module.db.AllSpells = {
 		{217832,45,0},nil,nil,
 		isTalent=true,cdDiff={205506,15}},
 	{191427,"DEMONHUNTER,DPS,DEFTANK",3,--Метаморфоза
-		nil,{191427,240,30},{187827,180,15},
-		durationDiff={235893,-15},cdDiff={320421,-60,235893,-60,296320,"*0.80"},sameSpell={200166,191427}},
+		nil,{191427,180,20},{187827,180,15},
+		durationDiff={235893,-15},cdDiff={320421,{-30,-60},235893,-60,296320,"*0.80"},sameSpell={200166,191427}},
 	{204596,"DEMONHUNTER",3,--Печать огня
 		{204596,30,2},
-		isTalent=true,durationDiff={209281,-1},cdDiff={209281,"*0.8",211489,"*0.75"},
+		isTalent=true,durationDiff={209281,-1},cdDiff={211489,"*0.75"},
 		CLEU_PREP = [[
 			spell389718_var204596 = {}
 		]],CLEU_SPELL_AURA_APPLIED=[[
@@ -13707,7 +13694,7 @@ module.db.AllSpells = {
 		]]},
 	{207684,"DEMONHUNTER,AOECC",1,--Печать страдания
 		{207684,120,2},
-		isTalent=true,durationDiff={209281,-1},cdDiff={320418,-30,209281,"*0.8",211489,"*0.75"},
+		isTalent=true,durationDiff={209281,-1},cdDiff={320418,-30,211489,"*0.75"},
 		CLEU_PREP = [[
 			spell389718_var207684 = {}
 		]],CLEU_SPELL_AURA_APPLIED=[[
@@ -13735,7 +13722,7 @@ module.db.AllSpells = {
 		]]},
 	{202137,"DEMONHUNTER,UTIL",1,--Печать немоты
 		nil,nil,{202137,60,2},
-		isTalent=true,durationDiff={209281,-1},cdDiff={209281,"*0.8",211489,"*0.75"},
+		isTalent=true,durationDiff={209281,-1},cdDiff={211489,"*0.75"},
 		CLEU_PREP = [[
 			spell389718_var202137 = {}
 		]],CLEU_SPELL_AURA_APPLIED=[[
@@ -13762,8 +13749,8 @@ module.db.AllSpells = {
 			end
 		]]},
 	{188501,"DEMONHUNTER",3,--Призрачное зрение
-		{188501,60,10},nil,nil,
-		stopDurWithAuraFade=188501},
+		{188501,30,10},nil,nil,
+		stopDurWithAuraFade=188501,durationDiff={389849,6},cdDiff={391429,30}},
 	{185123,"DEMONHUNTER",3,--Бросок боевого клинка
 		{185123,9,0},nil,nil},
 	{185245,"DEMONHUNTER,TAUNT",5,--Мучение
@@ -13790,14 +13777,14 @@ module.db.AllSpells = {
 		{232893,15,0},nil,nil,
 		isTalent=true,changeCdWithHaste=true},
 	{342817,"DEMONHUNTER",3,--Буря клинков
-		nil,{342817,20,0},nil,
+		nil,{342817,25,0},nil,
 		isTalent=true,changeCdWithHaste=true},
 	{196555,"DEMONHUNTER,DEF",3,--Путь Пустоты
 		nil,{196555,180,6},nil,
 		isTalent=true},
 	{202138,"DEMONHUNTER,UTIL",3,--Печать цепей
 		nil,nil,{202138,60,2},
-		isTalent=true,cdDiff={209281,"*0.8",211489,"*0.75"},
+		isTalent=true,cdDiff={211489,"*0.75"},
 		CLEU_PREP = [[
 			spell389718_var202138 = {}
 		]],CLEU_SPELL_AURA_APPLIED=[[
@@ -13828,7 +13815,7 @@ module.db.AllSpells = {
 		isTalent=true},
 	{390163,"DEMONHUNTER",3,--Элизийский декрет
 		nil,nil,{390163,60,2},
-		isTalent=true,cdDiff={209281,"*0.8"},
+		isTalent=true,
 		CLEU_PREP = [[
 			spell389718_var390163 = {}
 		]],CLEU_SPELL_AURA_APPLIED=[[
@@ -13983,7 +13970,7 @@ module.db.AllSpells = {
 		isTalent=true,cdDiff={412713,"*0.9"}},
 	{409311,"EVOKER",3,--Prescience
 		nil,nil,nil,{409311,12,0},
-		isTalent=true,cdDiff={412713,"*0.9"}},
+		isTalent=true,cdDiff={412713,"*0.9"},hasCharges=1},
 	{404977,"EVOKER",3,--Time Skip
 		nil,nil,nil,{404977,180,2},
 		isTalent=true,cdDiff={412713,"*0.9"}},
@@ -14282,6 +14269,27 @@ module.db.AllSpells = {
 	{370511,"ITEMS",3,--Refreshing Healing Potion
 		{370511,300,0},
 		item=191380},
+	{422146,"ITEMS",3,--Belor'relos
+		{422146,120,0},
+		item=207172},
+	{422441,"ITEMS",3,--Branch of the Tormented Ancient
+		{422441,150,0},
+		item=207169},
+	{422303,"ITEMS",3,--Bandolier of Twisted Blades
+		{422303,90,0},
+		item=207165},
+	{423611,"ITEMS",3,--Ashes of the Embersoul
+		{423611,120,0},
+		item=207167},
+	{422956,"ITEMS",3,--Nymue's Unraveling Spindle
+		{422956,120,18},
+		item=208615},
+	{422083,"ITEMS",3,--Smoldering Seedling
+		{422083,120,0},
+		item=207170},
+	{427113,"ITEMS",3,--Dreambinder
+		{427113,120,4},
+		item=208616},
 
 
 	{295373,"ESSENCES",3,--Сосредоточенный огонь

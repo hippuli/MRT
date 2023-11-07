@@ -1,6 +1,11 @@
 local GlobalAddonName, ExRT = ...
 
 ExRT.Options.Changelog = [=[
+v.4800
+* 10.2 update
+* Note: added option "Personal note in separate window"
+* Note: added ability to show any draft in separate window (as many as you want), until reload
+
 v.4785
 * Raid cooldowns: added option for key mod for clicks (whispers)
 * Major fixes
