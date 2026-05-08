@@ -1,4 +1,1 @@
 package-as: MRT
-
-move-folders:
-  MRT/MRT: MRT
